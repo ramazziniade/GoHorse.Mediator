@@ -1,0 +1,35 @@
+name: Publish NuGet
+
+on:
+  release:
+    types: 
+        - created
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore
+      run: dotnet restore src/GoHorse.Madiator.csproj
+
+    - name: Build
+      run: dotnet build src/GoHorse.Madiator.csproj --configuration Release --no-restore
+
+    - name: Version
+      id: version
+      run: echo "TAG_VERSION=${GITHUB_REF##*/}" | sed 's/^v//' >> $GITHUB_ENV
+    
+    - name: Pack NuGet
+      run: dotnet pack GoHorse.Madiator/GoHorse.Madiator.csproj --configuration Release --no-build -o out /p:Version=$TAG_VERSION
+    
+    - name: Publish NuGet
+      run: dotnet nuget push out/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
